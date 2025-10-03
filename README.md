@@ -236,12 +236,38 @@ Le projet utilise PostgreSQL avec l'extension PostGIS pour la géolocalisation.
 CREATE EXTENSION IF NOT EXISTS postgis;
 ```
 
+## 🚀 Fonctionnalités avancées
+
+### Regroupement intelligent des étapes
+- **Regroupement par `route_id`** : Les étapes consécutives sur la même ligne sont regroupées
+- **Comptage automatique** : Le nombre d'étapes finales est calculé automatiquement
+- **Vue simplifiée** : L'utilisateur voit les étapes logiques plutôt que chaque arrêt
+
+### Intégration VTC
+- **Calcul automatique des tarifs** basé sur la distance PostGIS
+- **Alternatives triées** du moins cher au plus cher
+- **Support multi-VTC** avec différentes configurations
+- **Intégration transparente** dans les réponses de routage
+
+### Performance optimisée
+- **Import batch** avec `UNNEST` pour de meilleures performances
+- **BFS optimisé** avec requêtes level-by-level
+- **Index de performance** pour les requêtes de routage
+- **Enrichissement en une seule requête** avec CTE
+
+### Multi-modalité
+- **Trajets multimodaux** avec correspondances intelligentes
+- **Trajets directs** pour les trajets simples
+- **Support multi-agences** avec propagation automatique de `agency_id`
+- **Géolocalisation précise** avec PostGIS
+
 ## 📚 Ressources
 
 - [Documentation NestJS](https://docs.nestjs.com)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [GTFS Specification](https://gtfs.org/schedule/reference/)
 - [PostGIS Documentation](https://postgis.net/documentation/)
+- [Changelog](./CHANGELOG.md)
 
 ## 📄 License
 
