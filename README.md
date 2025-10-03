@@ -261,12 +261,100 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 - **Support multi-agences** avec propagation automatique de `agency_id`
 - **Géolocalisation précise** avec PostGIS
 
+## 🚀 Déploiement sur Vercel
+
+### Prérequis
+- Compte Vercel
+- Base de données PostgreSQL/PostGIS (Supabase, Neon, ou autre)
+- Variables d'environnement configurées
+
+### Étapes de déploiement
+
+#### 1. Préparation du projet
+```bash
+# Cloner le repository
+git clone <votre-repo>
+cd passbi-gtfs-v1
+
+# Installer les dépendances
+npm install
+
+# Tester le build local
+npm run build:vercel
+```
+
+#### 2. Configuration Vercel
+```bash
+# Installer Vercel CLI
+npm i -g vercel
+
+# Se connecter à Vercel
+vercel login
+
+# Déployer
+vercel
+
+# Pour la production
+vercel --prod
+```
+
+#### 3. Variables d'environnement
+Dans le dashboard Vercel, ajoutez ces variables :
+
+```env
+DATABASE_URL="postgresql://username:password@host:5432/database"
+NODE_ENV="production"
+PORT="3000"
+GTFS_DATA_PATH="./data/gtfs"
+```
+
+#### 4. Configuration de la base de données
+```bash
+# Appliquer les migrations
+npx prisma migrate deploy
+
+# Générer le client Prisma
+npx prisma generate
+```
+
+#### 5. Import des données GTFS
+```bash
+# Via l'API après déploiement
+curl -X POST https://votre-app.vercel.app/gtfs/import \
+  -H 'Content-Type: application/json' \
+  -d '{"dirPath":"./fixtures/gtfs_ddd","agencyId":"DDD"}'
+
+# Construire le graphe
+curl -X POST https://votre-app.vercel.app/gtfs/build-graph
+```
+
+### ⚠️ Limitations Vercel
+
+- **Taille maximale** : 50MB par fonction
+- **Timeout** : 30 secondes maximum par requête
+- **Mémoire** : Limite de mémoire pour les gros imports GTFS
+- **Fichiers statiques** : Les données GTFS doivent être hébergées ailleurs
+
+### 🔧 Optimisations pour Vercel
+
+- **Build optimisé** : `npm run build:vercel` inclut Prisma generate
+- **Fichiers ignorés** : `.vercelignore` exclut les gros fichiers
+- **Configuration Prisma** : `engineType = "library"` pour serverless
+- **Scripts Vercel** : `vercel-build` et `vercel-dev` configurés
+
+### 📊 Monitoring
+
+- **Logs Vercel** : Dashboard Vercel pour les logs
+- **Métriques** : Monitoring des performances
+- **Erreurs** : Gestion des erreurs serverless
+
 ## 📚 Ressources
 
 - [Documentation NestJS](https://docs.nestjs.com)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [GTFS Specification](https://gtfs.org/schedule/reference/)
 - [PostGIS Documentation](https://postgis.net/documentation/)
+- [Vercel Documentation](https://vercel.com/docs)
 - [Changelog](./CHANGELOG.md)
 
 ## 📄 License
