@@ -1,0 +1,50 @@
+# .cursor/gtfs_rules
+# Règles pour générer du code d'import GTFS dans la base Postgres/PostGIS via NestJS.
+# Les fichiers GTFS sont conformes au standard GTFS schedule.
+
+rules:
+  - Chaque fichier GTFS doit être importé dans une table SQL avec clés primaires et index.
+  - Les colonnes et types doivent respecter la spec GTFS officielle (gtfs.org).
+  - Les imports doivent être batchés (COPY ou Prisma raw insert) pour performance.
+  - Les time fields HH:MM:SS doivent être convertis en "seconds since midnight".
+  - Ajouter des indexes utiles (stop_times on stop_id, stop_sequence, departure_time).
+  - Ajouter des colonnes geom (geometry(Point,4326)) pour stops.
+  - Ne pas exposer les credentials DB.
+  - Utiliser agency_id comme clé étrangère partout.
+  - Multi-agences supportées (chaque feed → agency).
+
+context:
+  gtfs_files:
+    required:
+      - agency.txt
+      - stops.txt
+      - routes.txt
+      - trips.txt
+      - stop_times.txt
+      - calendar.txt
+    optional:
+      - calendar_dates.txt
+      - shapes.txt
+      - fare_attributes.txt
+      - fare_rules.txt
+  db_tables:
+    - agency
+    - stops
+    - routes
+    - trips
+    - stop_times
+    - calendar
+    - calendar_dates (optionnel)
+    - shapes (optionnel)
+    - fare_attributes (optionnel)
+    - fare_rules (optionnel)
+  transforms:
+    - stops.txt → geom = ST_SetSRID(ST_MakePoint(stop_lon, stop_lat),4326)
+    - stop_times.txt → arrival_time, departure_time → seconds since midnight
+    - shapes.txt → stocker points ordonnés + distance cumulée
+    - fare_attributes → prix en numeric, devise, méthode paiement
+    - fare_rules → lier à routes/zone
+  validation:
+    - Rejeter lignes incomplètes (id manquant)
+    - Vérifier unicité des primary keys
+    - Vérifier cohérence des foreign keys (trip_id, route_id, stop_id, etc.)

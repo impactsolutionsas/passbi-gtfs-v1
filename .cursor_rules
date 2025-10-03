@@ -1,0 +1,29 @@
+# .cursor_rules
+project_name: "passbi-gtfs-v1"
+description: >
+  NestJS backend MVP pour calculateur d'itinéraire multimodal
+  utilisant données GTFS statiques multi-agences.
+  Stack: NestJS 10, Prisma, Postgres/PostGIS, A* time-dependent.
+
+style:
+  - code doit être concis, lisible, commenté
+  - priorité sécurité (no secrets en clair)
+  - offline-first: prévoir index & perf p95<300ms
+  - multi-tenant via agency_id
+
+rules:
+  - Toujours générer du code NestJS avec TypeScript.
+  - DTO avec class-validator.
+  - Prisma pour DB access, mais migrations SQL séparées.
+  - Ajouter `// TODO` clair pour étapes non finies (pas de placeholder vague).
+  - Les tests unitaires doivent être dans `src/__tests__/`.
+  - Ne jamais afficher ou logger DATABASE_URL ou credentials.
+
+context:
+  - GTFS fichiers obligatoires: agency.txt, stops.txt, routes.txt, trips.txt, stop_times.txt, calendar.txt
+  - Optionnels: calendar_dates.txt, shapes.txt, fare_attributes.txt, fare_rules.txt
+  - Graphe multimodal: edges (walk, bus, rail, brt, vtc).
+  - Algorithme: A* temps-dépendant.
+
+# Règles GTFS spécifiques
+# Utiliser @rules gtfs_rules pour les imports GTFS

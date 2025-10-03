@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model agency {
+  agency_id       String            @id
+  agency_name     String
+  agency_url      String?
+  agency_timezone String
+  agency_lang     String?
+  agency_phone    String?
+  agency_email    String?
+  fare_attributes fare_attributes[]
+  routes          routes[]
+  stops           stops[]
+}
+
+model calendar {
+  service_id String   @id
+  monday     Int
+  tuesday    Int
+  wednesday  Int
+  thursday   Int
+  friday     Int
+  saturday   Int
+  sunday     Int
+  start_date DateTime @db.Date
+  end_date   DateTime @db.Date
+}
+
+model calendar_dates {
+  service_id     String
+  date           DateTime @db.Date
+  exception_type Int
+
+  @@id([service_id, date])
+}
+
+model edges {
+  id                                               BigInt          @id @default(autoincrement())
+  from_node                                        BigInt
+  to_node                                          BigInt
+  mode                                             transport_mode
+  distance_m                                       Int?
+  travel_time_s                                    Int?
+  wait_time_s                                      Int?            @default(0)
+  transfer_penalty_s                               Int?            @default(0)
+  monetary_cost_cfa                                Int?            @default(0)
+  line_trip_id                                     String?
+  route_id                                         String?
+  service_id                                       String?
+  dep_time_s                                       Int?
+  arr_time_s                                       Int?
+  node_route_stop_edges_from_nodeTonode_route_stop node_route_stop @relation("edges_from_nodeTonode_route_stop", fields: [from_node], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  node_route_stop_edges_to_nodeTonode_route_stop   node_route_stop @relation("edges_to_nodeTonode_route_stop", fields: [to_node], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([from_node], map: "edges_from_idx")
+  @@index([dep_time_s, arr_time_s], map: "edges_time_idx")
+  @@index([to_node], map: "edges_to_idx")
+}
+
+model fare_attributes {
+  fare_id        String       @id
+  price          Decimal?     @db.Decimal
+  currency_type  String?
+  payment_method Int?
+  transfers      Int?
+  agency_id      String?
+  agency         agency?      @relation(fields: [agency_id], references: [agency_id], onDelete: Cascade, onUpdate: NoAction)
+  fare_rules     fare_rules[] @ignore 
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model fare_rules {
+  fare_id         String?
+  route_id        String?
+  origin_id       String?
+  destination_id  String?
+  contains_id     String?
+  fare_attributes fare_attributes? @relation(fields: [fare_id], references: [fare_id], onDelete: Cascade, onUpdate: NoAction)
+  routes          routes?          @relation(fields: [route_id], references: [route_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@ignore
+}
+
+model node_route_stop {
+  id                                     BigInt                  @id @default(autoincrement())
+  stop_id                                String
+  route_id                               String?
+  geom                                   Unsupported("geometry")
+  edges_edges_from_nodeTonode_route_stop edges[]                 @relation("edges_from_nodeTonode_route_stop")
+  edges_edges_to_nodeTonode_route_stop   edges[]                 @relation("edges_to_nodeTonode_route_stop")
+  routes                                 routes?                 @relation(fields: [route_id], references: [route_id], onDelete: NoAction, onUpdate: NoAction)
+  stops                                  stops                   @relation(fields: [stop_id], references: [stop_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([geom], map: "nrs_geom_gix", type: Gist)
+  @@index([route_id], map: "nrs_route_idx")
+  @@index([stop_id], map: "nrs_stop_idx")
+  @@index([stop_id, route_id], map: "nrs_stop_route_idx")
+}
+
+model routes {
+  route_id         String            @id
+  agency_id        String
+  route_short_name String?
+  route_long_name  String?
+  route_type       Int
+  route_color      String?
+  route_text_color String?
+  fare_rules       fare_rules[] @ignore 
+  node_route_stop  node_route_stop[]
+  agency           agency            @relation(fields: [agency_id], references: [agency_id], onDelete: Cascade, onUpdate: NoAction)
+  trips            trips[]
+
+  @@index([agency_id], map: "routes_agency_idx")
+}
+
+model shapes {
+  shape_id            String
+  shape_pt_lat        Float
+  shape_pt_lon        Float
+  shape_pt_sequence   Int
+  shape_dist_traveled Float?
+
+  @@id([shape_id, shape_pt_sequence])
+  @@index([shape_id], map: "shapes_id_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model stop_times {
+  trip_id        String
+  arrival_time   Unsupported("interval")?
+  departure_time Unsupported("interval")?
+  stop_id        String
+  stop_sequence  Int
+  pickup_type    Int?                     @default(0)
+  drop_off_type  Int?                     @default(0)
+  timepoint      Int?
+  stops          stops                    @relation(fields: [stop_id], references: [stop_id], onDelete: NoAction, onUpdate: NoAction)
+  trips          trips                    @relation(fields: [trip_id], references: [trip_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([trip_id, stop_sequence])
+  @@index([stop_id], map: "stop_times_stop_idx")
+  @@index([departure_time], map: "stop_times_dep_idx")
+  @@index([trip_id, stop_sequence], map: "stop_times_trip_seq_idx")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model stops {
+  stop_id         String                   @id
+  agency_id       String
+  stop_code       String?
+  stop_name       String
+  stop_desc       String?
+  stop_lat        Float
+  stop_lon        Float
+  location_type   Int?                     @default(0)
+  parent_station  String?
+  zone_id         String?
+  geom            Unsupported("geometry")?
+  node_route_stop node_route_stop[]
+  stop_times      stop_times[]
+  agency          agency                   @relation(fields: [agency_id], references: [agency_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([agency_id], map: "stops_agency_idx")
+  @@index([geom], map: "stops_geom_gix", type: Gist)
+}
+
+model trips {
+  trip_id       String       @id
+  route_id      String
+  service_id    String
+  trip_headsign String?
+  direction_id  Int?
+  shape_id      String?
+  stop_times    stop_times[]
+  routes        routes       @relation(fields: [route_id], references: [route_id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([route_id], map: "trips_route_idx")
+  @@index([service_id], map: "trips_service_idx")
+}
+
+model vtc_config {
+  id              Int      @id @default(autoincrement())
+  base_cost_cfa   Int?     @default(1000)
+  cost_per_km_cfa Int?     @default(200)
+  avg_speed_ms    Decimal? @default(7.0) @db.Decimal
+  name            String?
+  logo_url        String?
+}
+
+enum transport_mode {
+  walk
+  bus
+  rail
+  brt
+}

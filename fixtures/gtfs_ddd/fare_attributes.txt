@@ -1,0 +1,7 @@
+fare_id,price,currency_type,payment_method,transfers,transfer_duration
+ddd_section_1,100,XOF,0,0,
+ddd_section_2,150,XOF,0,0,
+ddd_section_3,175,XOF,0,0,
+ddd_section_4,200,XOF,0,0,
+ddd_section_5,250,XOF,0,0,
+ddd_section_6,350,XOF,0,0,

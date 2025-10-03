@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_phone,agency_email
+82abd4ab-f3b1-4852-92bf-32d82ebc5826,SETER,https://www.seter.sn/,UTC,,

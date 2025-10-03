@@ -1,0 +1,7 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_sort_order
+4445e51b-971b-4f1a-a94a-1ca0c9bef411-544a27a5-c6c6-4b70-b217-9c15d9b4278a,82abd4ab-f3b1-4852-92bf-32d82ebc5826,20001,Diamniadio (DIA) -> Dakar - Gare ferroviaire (DAK),2,1
+544a27a5-c6c6-4b70-b217-9c15d9b4278a-4445e51b-971b-4f1a-a94a-1ca0c9bef411,82abd4ab-f3b1-4852-92bf-32d82ebc5826,10001,Dakar - Gare ferroviaire (DAK) -> Diamniadio (DIA),2,2
+f8ec6c04-478a-40e1-842c-5c9ca5030109-544a27a5-c6c6-4b70-b217-9c15d9b4278a,82abd4ab-f3b1-4852-92bf-32d82ebc5826,20922,Yeumbeul (YEU) -> Dakar - Gare ferroviaire (DAK),2,3
+1d859f92-c798-4291-9631-262ed863698a-544a27a5-c6c6-4b70-b217-9c15d9b4278a,82abd4ab-f3b1-4852-92bf-32d82ebc5826,23001,Rufisque (RUF) -> Dakar - Gare ferroviaire (DAK),2,4
+544a27a5-c6c6-4b70-b217-9c15d9b4278a-f8ec6c04-478a-40e1-842c-5c9ca5030109,82abd4ab-f3b1-4852-92bf-32d82ebc5826,14922,Dakar - Gare ferroviaire (DAK) -> Yeumbeul (YEU),2,5
+544a27a5-c6c6-4b70-b217-9c15d9b4278a-1d859f92-c798-4291-9631-262ed863698a,82abd4ab-f3b1-4852-92bf-32d82ebc5826,13005,Dakar - Gare ferroviaire (DAK) -> Rufisque (RUF),2,6

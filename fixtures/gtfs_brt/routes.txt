@@ -1,0 +1,3 @@
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_color,route_text_color
+B2,BRT,B2,B2,,3,FF6600,000000
+B1,BRT,B1,B1,,3,00CC00,FFFFFF

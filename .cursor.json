@@ -1,0 +1,59 @@
+{
+  "rules": ".cursor_rules",
+  "temperature": 0.2,
+  "docs": [
+    "https://docs.nestjs.com/",
+    "https://www.prisma.io/docs",
+    "https://www.postgresql.org/docs/current/",
+    "https://postgis.net/documentation/",
+    "https://gtfs.org/documentation/overview/",
+    "https://gtfs.org/documentation/schedule/schedule-best-practices/",
+    "https://gtfs.org/fares-v2/",
+    "https://mobilitydata.org/gtfs-validator/",
+    "https://theory.stanford.edu/~amitp/GameProgramming/AStarComparison.html",
+    "https://www.typescriptlang.org/docs/",
+    "https://cursor.sh/docs"
+  ],
+  "context": {
+    "project": "passbi-gtfs-v1",
+    "description": "NestJS backend pour calculateur d'itinéraire multimodal GTFS",
+    "stack": ["NestJS 10", "Prisma", "PostgreSQL/PostGIS", "TypeScript"],
+    "features": [
+      "Import GTFS multi-agences",
+      "API REST pour recherche d'itinéraires", 
+      "Support PostGIS pour géolocalisation",
+      "Algorithme A* temps-dépendant",
+      "Multi-tenant via agency_id"
+    ]
+  },
+  "code_style": {
+    "framework": "NestJS",
+    "language": "TypeScript",
+    "database": "PostgreSQL/PostGIS",
+    "orm": "Prisma",
+    "validation": "class-validator",
+    "testing": "Jest"
+  },
+  "gtfs_specific": {
+    "rules_file": ".cursor/gtfs_rules",
+    "required_files": [
+      "agency.txt",
+      "stops.txt", 
+      "routes.txt",
+      "trips.txt",
+      "stop_times.txt",
+      "calendar.txt"
+    ],
+    "optional_files": [
+      "calendar_dates.txt",
+      "shapes.txt",
+      "fare_attributes.txt",
+      "fare_rules.txt"
+    ],
+    "transformations": {
+      "time_fields": "Convert HH:MM:SS to seconds since midnight",
+      "geometry": "Add PostGIS geometry columns for stops",
+      "indexes": "Create performance indexes for routing queries"
+    }
+  }
+}
