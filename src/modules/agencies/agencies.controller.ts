@@ -6,7 +6,7 @@ export class AgenciesController {
 	constructor(private readonly agenciesService: AgenciesService) {}
 
 	@Get()
-	async listAgencies(): Promise<{ agencies: AgencyInfo[] }> {
+	async listAgencies(): Promise<AgencyInfo[]> {
 		return this.agenciesService.listAgencies();
 	}
 }

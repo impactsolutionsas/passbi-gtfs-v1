@@ -147,7 +147,7 @@ export class GtfsGraphService {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async buildGraph() {
-		const sqlPath = path.resolve(process.cwd(), 'sql', '02_edges_build.sql');
+		const sqlPath = path.resolve(process.cwd(), 'sql', 'edges_build.sql');
 		if (!fs.existsSync(sqlPath)) {
 			throw new Error(`SQL script not found: ${sqlPath}`);
 		}

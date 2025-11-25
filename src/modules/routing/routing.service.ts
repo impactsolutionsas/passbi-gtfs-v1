@@ -243,7 +243,7 @@ export class RoutingService {
 			to: { lat: dto.toLat, lon: dto.toLon },
 			itinerary,
 			stepCount,
-			direct: directResult,
+			//direct: directResult,
 			alternatives: vtcAlternatives
 		};
 	}

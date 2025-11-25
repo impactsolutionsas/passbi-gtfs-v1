@@ -28,7 +28,7 @@ export class AgenciesService {
 
 	constructor(private readonly prisma: PrismaService) {}
 
-	async listAgencies(): Promise<{ agencies: AgencyInfo[] }> {
+	async listAgencies(): Promise<AgencyInfo[]> {
 		this.logger.log('Fetching agencies with routes and stops...');
 
 		// Récupérer toutes les agencies
@@ -94,6 +94,6 @@ export class AgenciesService {
 		}
 
 		this.logger.log(`Retrieved ${result.length} agencies with their routes and stops`);
-		return { agencies: result };
+		return result;
 	}
 }
