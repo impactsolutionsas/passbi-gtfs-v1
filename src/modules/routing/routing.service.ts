@@ -95,6 +95,109 @@ export class RoutingService {
 		return ordered;
 	}
 
+	/**
+	 * Merge legs with the same route_id, even when separated by walk segments
+	 * This ensures each unique route_id appears only once per journey
+	 * Walk segments between merged route segments are removed
+	 */
+	private mergeDuplicateRouteIds(legs: any[]): any[] {
+		if (legs.length === 0) return legs;
+
+		const merged: any[] = [];
+		const processed = new Set<number>();
+		const walksToSkip = new Set<number>();
+
+		// First pass: identify walk segments that are between legs with the same route_id
+		for (let i = 0; i < legs.length; i++) {
+			const leg = legs[i]!;
+			const isWalk = !leg.route_id || leg.mode === 'walk';
+			
+			if (isWalk) {
+				// Check if this walk is between two legs with the same route_id
+				const prevLeg = i > 0 ? legs[i - 1] : null;
+				const nextLeg = i < legs.length - 1 ? legs[i + 1] : null;
+				
+				if (prevLeg && nextLeg && 
+					prevLeg.route_id && nextLeg.route_id &&
+					prevLeg.mode !== 'walk' && nextLeg.mode !== 'walk' &&
+					prevLeg.route_id === nextLeg.route_id) {
+					// This walk is between two legs with the same route_id, mark it to skip
+					walksToSkip.add(i);
+				}
+			}
+		}
+
+		// Second pass: merge legs with the same route_id and build result
+		for (let i = 0; i < legs.length; i++) {
+			if (processed.has(i)) continue;
+
+			const currentLeg = legs[i]!;
+
+			// Skip walk segments that are between merged route segments
+			if (walksToSkip.has(i)) {
+				processed.add(i);
+				continue;
+			}
+
+			// If it's a walk segment, keep it as is
+			if (!currentLeg.route_id || currentLeg.mode === 'walk') {
+				merged.push(currentLeg);
+				processed.add(i);
+				continue;
+			}
+
+			// Find all subsequent legs with the same route_id (separated only by walk segments)
+			const routeId = currentLeg.route_id;
+			const legsToMerge: number[] = [i];
+			let j = i + 1;
+
+			// Look ahead for legs with the same route_id, skipping walk segments
+			while (j < legs.length) {
+				const nextLeg = legs[j]!;
+				
+				// If we encounter a walk segment, skip it and continue
+				if (!nextLeg.route_id || nextLeg.mode === 'walk') {
+					j++;
+					continue;
+				}
+
+				// If we encounter a different route_id, stop looking
+				if (nextLeg.route_id !== routeId) {
+					break;
+				}
+
+				// Found another leg with the same route_id
+				legsToMerge.push(j);
+				j++;
+			}
+
+			// Merge all legs with the same route_id
+			if (legsToMerge.length === 1) {
+				// Only one leg with this route_id, keep it as is
+				merged.push(currentLeg);
+			} else {
+				// Multiple legs to merge
+				const firstLeg = legs[legsToMerge[0]!]!;
+				const lastLeg = legs[legsToMerge[legsToMerge.length - 1]!]!;
+
+				// Create merged leg with first leg's from_stop and last leg's to_stop
+				const mergedLeg = {
+					...firstLeg,
+					to_stop: lastLeg.to_stop,
+				};
+
+				merged.push(mergedLeg);
+			}
+
+			// Mark all merged legs as processed
+			for (const idx of legsToMerge) {
+				processed.add(idx);
+			}
+		}
+
+		return merged;
+	}
+
 	private async enrichLegs(edges: GraphEdgeRow[]): Promise<{ legs: any[]; stepCount: number }> {
 		if (edges.length === 0) return { legs: [], stepCount: 0 };
 		
@@ -214,7 +317,13 @@ export class RoutingService {
 			stepCount++;
 		}
 
-		return { legs, stepCount };
+		// Merge duplicate route_ids (even when separated by walk segments)
+		const mergedLegs = this.mergeDuplicateRouteIds(legs);
+		
+		// Recalculate stepCount based on merged legs
+		const finalStepCount = mergedLegs.length;
+
+		return { legs: mergedLegs, stepCount: finalStepCount };
 	}
 
 	async route(dto: RouteQueryDto) {

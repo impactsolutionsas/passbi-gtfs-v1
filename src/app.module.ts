@@ -8,9 +8,10 @@ import { RoutingModule } from './modules/routing/routing.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AgenciesModule } from './modules/agencies/agencies.module';
 import { VtcModule } from './modules/vtc/vtc.module';
+import { SearchModule } from './modules/search/search.module';
 
 @Module({
-  imports: [GtfsModule, GtfsGraphModule, RoutingModule, AdminModule, AgenciesModule, VtcModule],
+  imports: [GtfsModule, GtfsGraphModule, RoutingModule, AdminModule, AgenciesModule, VtcModule, SearchModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })
