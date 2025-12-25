@@ -6,7 +6,8 @@ services:
     region: oregon
     repo: https://github.com/impactsolutionsas/passbi-gtfs-v1.git
     branch: main
-    buildCommand: npm install && npm run build && npx prisma generate
+    rootDir: .  # S'assurer que le root directory est à la racine
+    buildCommand: npm install && npm run build:vercel
     startCommand: node dist/main
     envVars:
       - key: NODE_ENV
