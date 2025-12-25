@@ -25,11 +25,11 @@ export class SearchService {
 		}
 
 		try {
-			const results = await this.prisma.$queryRawUnsafe<SearchPlaceResult[]>(
+			const results = await this.prisma.$queryRawUnsafe(
 				`SELECT * FROM search_places($1, $2::int)`,
 				query.trim(),
 				limit
-			);
+			) as SearchPlaceResult[];
 
 			this.logger.log(`Found ${results.length} results for query: "${query}"`);
 			return results;

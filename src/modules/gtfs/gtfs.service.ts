@@ -12,9 +12,9 @@ export class GtfsService {
 	constructor(private readonly prisma: PrismaService) {}
 
 	async listAgencies() {
-		const agencies = await this.prisma.$queryRawUnsafe<any[]>(
+		const agencies = await this.prisma.$queryRawUnsafe(
 			'SELECT agency_id, agency_name FROM agency ORDER BY agency_id'
-		);
+		) as Array<{ agency_id: string; agency_name: string }>;
 		return agencies;
 	}
 

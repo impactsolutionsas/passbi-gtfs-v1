@@ -23,13 +23,13 @@ export class RoutingService {
 	) {}
 
 	private async findNearestNodes(lat: number, lon: number, k = 5): Promise<number[]> {
-		const rows = await this.prisma.$queryRawUnsafe<any[]>(
+		const rows = await this.prisma.$queryRawUnsafe(
 			`select id from node_route_stop
 			 order by geom <-> ST_SetSRID(ST_MakePoint($1, $2),4326)
 			 limit $3`,
 			lon, lat, k
-		);
-		return rows.map(r => Number(r.id)).filter(n => Number.isFinite(n));
+		) as Array<{ id: bigint | number | string }>;
+		return rows.map((r: { id: bigint | number | string }) => Number(r.id)).filter((n: number) => Number.isFinite(n));
 	}
 
 	private async bfsPathMulti(starts: number[], goals: Set<number>, maxVisited = 200000, maxDepth = 2000, maxNext = 200000): Promise<{ path: number[] | null, reached?: number }> {
@@ -50,10 +50,10 @@ export class RoutingService {
 					return { path, reached: node };
 				}
 			}
-			const rows = await this.prisma.$queryRawUnsafe<any[]>(
+			const rows = await this.prisma.$queryRawUnsafe(
 				`select from_node, to_node from edges where from_node = ANY($1::bigint[])`,
 				frontier
-			);
+			) as Array<{ from_node: bigint | number | string; to_node: bigint | number | string }>;
 			const next: number[] = [];
 			for (const r of rows) {
 				const from = Number(r.from_node);
@@ -78,12 +78,12 @@ export class RoutingService {
 			froms.push(path[i]!);
 			tos.push(path[i + 1]!);
 		}
-		const rows = await this.prisma.$queryRawUnsafe<any[]>(
+		const rows = await this.prisma.$queryRawUnsafe(
 			`select from_node, to_node, mode::text as mode, route_id, line_trip_id, dep_time_s, arr_time_s
 			 from edges
 			 where from_node = ANY($1::bigint[]) and to_node = ANY($2::bigint[])`,
 			froms, tos
-		);
+		) as GraphEdgeRow[];
 		const edgeMap = new Map<string, GraphEdgeRow>();
 		for (const r of rows) edgeMap.set(`${r.from_node}-${r.to_node}`, r as GraphEdgeRow);
 		const ordered: GraphEdgeRow[] = [];
@@ -210,13 +210,13 @@ export class RoutingService {
 		}
 
 		// Récupérer les edge_ids avec ordre préservé
-		const edgeRows = await this.prisma.$queryRawUnsafe<any[]>(`
+		const edgeRows = await this.prisma.$queryRawUnsafe(`
 			select e.id, e.from_node, e.to_node
 			from edges e
 			where (e.from_node, e.to_node) in (
 				select unnest($1::bigint[]), unnest($2::bigint[])
 			)
-		`, fromNodes, toNodes);
+		`, fromNodes, toNodes) as Array<{ id: bigint | number | string; from_node: bigint | number | string; to_node: bigint | number | string }>;
 
 		// Créer un map pour retrouver l'ordre
 		const edgeMap = new Map<string, number>();
@@ -235,7 +235,7 @@ export class RoutingService {
 		if (edgeIds.length === 0) return { legs: [], stepCount: 0 };
 
 		// Requête unique enrichie avec ordre préservé
-		const rows = await this.prisma.$queryRawUnsafe<any[]>(`
+		const rows = await this.prisma.$queryRawUnsafe(`
 			with seq as (
 				select unnest($1::bigint[]) as edge_id, generate_series(1, array_length($1::bigint[],1)) as ord
 			)
@@ -266,7 +266,7 @@ export class RoutingService {
 			join stops s2           on s2.stop_id = n2.stop_id
 			left join routes r      on r.route_id = e.route_id
 			order by seq.ord
-		`, edgeIds);
+		`, edgeIds) as Array<any>;
 
 		// Agréger en legs par (mode, route_id) et compter les étapes
 		const legs: any[] = [];
@@ -397,10 +397,10 @@ export class RoutingService {
 		for (const start of starts) {
 			for (const goal of goals) {
 				// Vérifier s'il existe un edge direct
-				const directEdge = await this.prisma.$queryRawUnsafe<any[]>(
+				const directEdge = await this.prisma.$queryRawUnsafe(
 					`SELECT from_node, to_node FROM edges WHERE from_node = $1 AND to_node = $2 LIMIT 1`,
 					start, goal
-				);
+				) as Array<{ from_node: bigint | number | string; to_node: bigint | number | string }>;
 				
 				if (directEdge.length > 0) {
 					return [start, goal];

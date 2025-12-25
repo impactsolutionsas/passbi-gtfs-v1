@@ -180,18 +180,18 @@ export class GtfsGraphService {
 				this.logger.error(`Failed at ${idx + 1}/${statements.length}: ${(err as Error).message}`);
 			}
 		}
-		const [{ count: nodesStr } = { count: '0' }] = await this.prisma.$queryRawUnsafe<any[]>(
+		const [{ count: nodesStr } = { count: '0' }] = await this.prisma.$queryRawUnsafe(
 			'SELECT COUNT(*)::text as count FROM node_route_stop'
-		);
-		const [{ count: edgesStr } = { count: '0' }] = await this.prisma.$queryRawUnsafe<any[]>(
+		) as Array<{ count: string }>;
+		const [{ count: edgesStr } = { count: '0' }] = await this.prisma.$queryRawUnsafe(
 			'SELECT COUNT(*)::text as count FROM edges'
-		);
+		) as Array<{ count: string }>;
 		const nodes = Number(nodesStr ?? '0');
 		const edges = Number(edgesStr ?? '0');
 		if (edges === 0) {
-			const [{ c: stCnt } = { c: '0' }] = await this.prisma.$queryRawUnsafe<any[]>("SELECT COUNT(*)::text c FROM stop_times");
-			const [{ c: tripsCnt } = { c: '0' }] = await this.prisma.$queryRawUnsafe<any[]>("SELECT COUNT(*)::text c FROM trips");
-			const [{ c: stopsCnt } = { c: '0' }] = await this.prisma.$queryRawUnsafe<any[]>("SELECT COUNT(*)::text c FROM stops");
+			const [{ c: stCnt } = { c: '0' }] = await this.prisma.$queryRawUnsafe("SELECT COUNT(*)::text c FROM stop_times") as Array<{ c: string }>;
+			const [{ c: tripsCnt } = { c: '0' }] = await this.prisma.$queryRawUnsafe("SELECT COUNT(*)::text c FROM trips") as Array<{ c: string }>;
+			const [{ c: stopsCnt } = { c: '0' }] = await this.prisma.$queryRawUnsafe("SELECT COUNT(*)::text c FROM stops") as Array<{ c: string }>;
 			this.logger.warn(`Edges=0. Core counts: stop_times=${stCnt}, trips=${tripsCnt}, stops=${stopsCnt}. Check SQL variables and script logic.`);
 		}
 		// Créer les index de performance
