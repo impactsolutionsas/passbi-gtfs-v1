@@ -95,12 +95,12 @@ export class VtcService {
 
 		for (const config of configs) {
 			// Calculer la distance en mètres avec PostGIS
-			const distanceResult = await this.prisma.$queryRawUnsafe<any[]>(`
+			const distanceResult = await this.prisma.$queryRawUnsafe(`
 				SELECT ST_DistanceSphere(
 					ST_SetSRID(ST_MakePoint($1, $2), 4326),
 					ST_SetSRID(ST_MakePoint($3, $4), 4326)
 				) as distance_m
-			`, fromLon, fromLat, toLon, toLat);
+			`, fromLon, fromLat, toLon, toLat) as Array<{ distance_m: number }>;
 
 			const distanceM = Number(distanceResult[0]?.distance_m || 0);
 			const distanceKm = distanceM / 1000;

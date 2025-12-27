@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: passbi-gtfs-v1
+    runtime: node
+    plan: starter
+    region: oregon
+    repo: https://github.com/impactsolutionsas/passbi-gtfs-v1.git
+    branch: main
+    rootDir: .  # S'assurer que le root directory est à la racine
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: node dist/main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: DATABASE_URL
+        sync: false  # À configurer manuellement dans le dashboard Render
+      - key: GTFS_DATA_PATH
+        value: ./data/gtfs
+

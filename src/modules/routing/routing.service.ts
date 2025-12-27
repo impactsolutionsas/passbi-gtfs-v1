@@ -23,13 +23,13 @@ export class RoutingService {
 	) {}
 
 	private async findNearestNodes(lat: number, lon: number, k = 5): Promise<number[]> {
-		const rows = await this.prisma.$queryRawUnsafe<any[]>(
+		const rows = await this.prisma.$queryRawUnsafe(
 			`select id from node_route_stop
 			 order by geom <-> ST_SetSRID(ST_MakePoint($1, $2),4326)
 			 limit $3`,
 			lon, lat, k
-		);
-		return rows.map(r => Number(r.id)).filter(n => Number.isFinite(n));
+		) as Array<{ id: bigint | number | string }>;
+		return rows.map((r: { id: bigint | number | string }) => Number(r.id)).filter((n: number) => Number.isFinite(n));
 	}
 
 	private async bfsPathMulti(starts: number[], goals: Set<number>, maxVisited = 200000, maxDepth = 2000, maxNext = 200000): Promise<{ path: number[] | null, reached?: number }> {
@@ -50,10 +50,10 @@ export class RoutingService {
 					return { path, reached: node };
 				}
 			}
-			const rows = await this.prisma.$queryRawUnsafe<any[]>(
+			const rows = await this.prisma.$queryRawUnsafe(
 				`select from_node, to_node from edges where from_node = ANY($1::bigint[])`,
 				frontier
-			);
+			) as Array<{ from_node: bigint | number | string; to_node: bigint | number | string }>;
 			const next: number[] = [];
 			for (const r of rows) {
 				const from = Number(r.from_node);
@@ -78,12 +78,12 @@ export class RoutingService {
 			froms.push(path[i]!);
 			tos.push(path[i + 1]!);
 		}
-		const rows = await this.prisma.$queryRawUnsafe<any[]>(
+		const rows = await this.prisma.$queryRawUnsafe(
 			`select from_node, to_node, mode::text as mode, route_id, line_trip_id, dep_time_s, arr_time_s
 			 from edges
 			 where from_node = ANY($1::bigint[]) and to_node = ANY($2::bigint[])`,
 			froms, tos
-		);
+		) as GraphEdgeRow[];
 		const edgeMap = new Map<string, GraphEdgeRow>();
 		for (const r of rows) edgeMap.set(`${r.from_node}-${r.to_node}`, r as GraphEdgeRow);
 		const ordered: GraphEdgeRow[] = [];
@@ -93,6 +93,109 @@ export class RoutingService {
 			if (e) ordered.push(e);
 		}
 		return ordered;
+	}
+
+	/**
+	 * Merge legs with the same route_id, even when separated by walk segments
+	 * This ensures each unique route_id appears only once per journey
+	 * Walk segments between merged route segments are removed
+	 */
+	private mergeDuplicateRouteIds(legs: any[]): any[] {
+		if (legs.length === 0) return legs;
+
+		const merged: any[] = [];
+		const processed = new Set<number>();
+		const walksToSkip = new Set<number>();
+
+		// First pass: identify walk segments that are between legs with the same route_id
+		for (let i = 0; i < legs.length; i++) {
+			const leg = legs[i]!;
+			const isWalk = !leg.route_id || leg.mode === 'walk';
+			
+			if (isWalk) {
+				// Check if this walk is between two legs with the same route_id
+				const prevLeg = i > 0 ? legs[i - 1] : null;
+				const nextLeg = i < legs.length - 1 ? legs[i + 1] : null;
+				
+				if (prevLeg && nextLeg && 
+					prevLeg.route_id && nextLeg.route_id &&
+					prevLeg.mode !== 'walk' && nextLeg.mode !== 'walk' &&
+					prevLeg.route_id === nextLeg.route_id) {
+					// This walk is between two legs with the same route_id, mark it to skip
+					walksToSkip.add(i);
+				}
+			}
+		}
+
+		// Second pass: merge legs with the same route_id and build result
+		for (let i = 0; i < legs.length; i++) {
+			if (processed.has(i)) continue;
+
+			const currentLeg = legs[i]!;
+
+			// Skip walk segments that are between merged route segments
+			if (walksToSkip.has(i)) {
+				processed.add(i);
+				continue;
+			}
+
+			// If it's a walk segment, keep it as is
+			if (!currentLeg.route_id || currentLeg.mode === 'walk') {
+				merged.push(currentLeg);
+				processed.add(i);
+				continue;
+			}
+
+			// Find all subsequent legs with the same route_id (separated only by walk segments)
+			const routeId = currentLeg.route_id;
+			const legsToMerge: number[] = [i];
+			let j = i + 1;
+
+			// Look ahead for legs with the same route_id, skipping walk segments
+			while (j < legs.length) {
+				const nextLeg = legs[j]!;
+				
+				// If we encounter a walk segment, skip it and continue
+				if (!nextLeg.route_id || nextLeg.mode === 'walk') {
+					j++;
+					continue;
+				}
+
+				// If we encounter a different route_id, stop looking
+				if (nextLeg.route_id !== routeId) {
+					break;
+				}
+
+				// Found another leg with the same route_id
+				legsToMerge.push(j);
+				j++;
+			}
+
+			// Merge all legs with the same route_id
+			if (legsToMerge.length === 1) {
+				// Only one leg with this route_id, keep it as is
+				merged.push(currentLeg);
+			} else {
+				// Multiple legs to merge
+				const firstLeg = legs[legsToMerge[0]!]!;
+				const lastLeg = legs[legsToMerge[legsToMerge.length - 1]!]!;
+
+				// Create merged leg with first leg's from_stop and last leg's to_stop
+				const mergedLeg = {
+					...firstLeg,
+					to_stop: lastLeg.to_stop,
+				};
+
+				merged.push(mergedLeg);
+			}
+
+			// Mark all merged legs as processed
+			for (const idx of legsToMerge) {
+				processed.add(idx);
+			}
+		}
+
+		return merged;
 	}
 
 	private async enrichLegs(edges: GraphEdgeRow[]): Promise<{ legs: any[]; stepCount: number }> {
@@ -107,13 +210,13 @@ export class RoutingService {
 		}
 
 		// Récupérer les edge_ids avec ordre préservé
-		const edgeRows = await this.prisma.$queryRawUnsafe<any[]>(`
+		const edgeRows = await this.prisma.$queryRawUnsafe(`
 			select e.id, e.from_node, e.to_node
 			from edges e
 			where (e.from_node, e.to_node) in (
 				select unnest($1::bigint[]), unnest($2::bigint[])
 			)
-		`, fromNodes, toNodes);
+		`, fromNodes, toNodes) as Array<{ id: bigint | number | string; from_node: bigint | number | string; to_node: bigint | number | string }>;
 
 		// Créer un map pour retrouver l'ordre
 		const edgeMap = new Map<string, number>();
@@ -132,7 +235,7 @@ export class RoutingService {
 		if (edgeIds.length === 0) return { legs: [], stepCount: 0 };
 
 		// Requête unique enrichie avec ordre préservé
-		const rows = await this.prisma.$queryRawUnsafe<any[]>(`
+		const rows = await this.prisma.$queryRawUnsafe(`
 			with seq as (
 				select unnest($1::bigint[]) as edge_id, generate_series(1, array_length($1::bigint[],1)) as ord
 			)
@@ -163,7 +266,7 @@ export class RoutingService {
 			join stops s2           on s2.stop_id = n2.stop_id
 			left join routes r      on r.route_id = e.route_id
 			order by seq.ord
-		`, edgeIds);
+		`, edgeIds) as Array<any>;
 
 		// Agréger en legs par (mode, route_id) et compter les étapes
 		const legs: any[] = [];
@@ -214,7 +317,13 @@ export class RoutingService {
 			stepCount++;
 		}
 
-		return { legs, stepCount };
+		// Merge duplicate route_ids (even when separated by walk segments)
+		const mergedLegs = this.mergeDuplicateRouteIds(legs);
+		
+		// Recalculate stepCount based on merged legs
+		const finalStepCount = mergedLegs.length;
+
+		return { legs: mergedLegs, stepCount: finalStepCount };
 	}
 
 	async route(dto: RouteQueryDto) {
@@ -288,10 +397,10 @@ export class RoutingService {
 		for (const start of starts) {
 			for (const goal of goals) {
 				// Vérifier s'il existe un edge direct
-				const directEdge = await this.prisma.$queryRawUnsafe<any[]>(
+				const directEdge = await this.prisma.$queryRawUnsafe(
 					`SELECT from_node, to_node FROM edges WHERE from_node = $1 AND to_node = $2 LIMIT 1`,
 					start, goal
-				);
+				) as Array<{ from_node: bigint | number | string; to_node: bigint | number | string }>;
 				
 				if (directEdge.length > 0) {
 					return [start, goal];
