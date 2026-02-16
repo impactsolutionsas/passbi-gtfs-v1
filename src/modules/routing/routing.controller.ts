@@ -8,10 +8,7 @@ export class RoutingController {
 
 	@Post('route')
 	async route(@Body() dto: RouteQueryDto) {
-		console.log(dto);
-		const result = await this.routing.route(dto);
-		console.log(result);
-		return result;
+		return this.routing.route(dto);
 	}
 
 	@Post('route/direct')
